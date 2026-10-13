@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stacks — Search the Encyclopedia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a href="#/" class="logo" aria-label="Stacks home">STACKS</a>
+      <nav class="topnav">
+        <a href="#/">Search</a>
+        <a href="#/explore">Explore</a>
+        <a href="#/random">Random article</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Home view -->
+  <main id="home-view">
+    <!-- Stays put while the page scrolls over it -->
+    <div class="home-art" aria-hidden="true"></div>
+    <section class="hero">
+      <div class="hero-slides" id="hero-slides" aria-hidden="true"></div>
+      <div class="wrap hero-content">
+        <h1>Explore the world's knowledge, cultures, and ideas</h1>
+        <p class="hero-sub">Search millions of free encyclopedia articles from Wikipedia.</p>
+        <form class="search-form" id="hero-form" role="search">
+          <input type="search" id="hero-input" placeholder="Search articles, people, places, and ideas" autocomplete="off" required>
+          <button type="submit" aria-label="Search">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </button>
+        </form>
+        <div class="hero-links">
+          <a href="#/explore">Explore by subject →</a>
+          <a href="#/random">Read a random article →</a>
+        </div>
+      </div>
+      <a class="hero-credit" id="hero-credit" target="_blank" rel="noopener"></a>
+    </section>
+
+    <section class="wrap explore">
+      <div class="explore-head">
+        <h2>Explore by subject</h2>
+        <a href="#/explore">See all subjects and search by tags →</a>
+      </div>
+      <div class="subjects" id="home-subjects"></div>
+    </section>
+
+    <section class="features">
+      <div class="wrap features-grid">
+        <div class="feature">
+          <h3>Free to read</h3>
+          <p>Every article comes from Wikipedia, the free encyclopedia anyone can read.</p>
+        </div>
+        <div class="feature">
+          <h3>Search everything</h3>
+          <p>Find people, places, events, and ideas across more than six million articles.</p>
+        </div>
+        <div class="feature">
+          <h3>Follow your curiosity</h3>
+          <p>Browse subjects by tag, or click any link inside an article to keep exploring.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Explore view -->
+  <main id="explore-view" hidden>
+    <div class="explore-banner">
+      <div class="wrap">
+        <h1>Explore by subject</h1>
+        <p>Pick a subject, or narrow things down with tags in the sidebar.</p>
+      </div>
+    </div>
+    <div class="wrap explore-layout">
+      <aside class="sidebar">
+        <h2>Search by tags</h2>
+        <input type="search" id="tag-filter" class="tag-filter" placeholder="Find a tag…" autocomplete="off">
+        <div class="tag-list" id="tag-list"></div>
+        <div class="tag-actions">
+          <button type="button" class="btn-primary" id="tag-search" disabled>Search articles with these tags</button>
+          <button type="button" class="btn-link" id="tag-clear" hidden>Clear tags</button>
+        </div>
+      </aside>
+      <section class="explore-main">
+        <p class="explore-count" id="explore-count"></p>
+        <div class="subject-grid" id="subject-grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Subject view (one page per subject, tags come from subjects.js) -->
+  <main id="subject-view" hidden>
+    <!-- Sea ripples in the subject's color; fixed behind the page -->
+    <div class="sea" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="explore-banner">
+      <div class="wrap">
+        <p class="crumb"><a href="#/explore">← All subjects</a></p>
+        <h1 id="subj-title"></h1>
+        <p><span id="subj-intro"></span> <a id="subj-overview"></a></p>
+      </div>
+    </div>
+    <div class="wrap explore-layout">
+      <aside class="sidebar tall">
+        <h2>Search by tags</h2>
+        <input type="search" id="subj-filter" class="tag-filter" placeholder="Find a tag…" autocomplete="off">
+        <div id="subj-groups"></div>
+      </aside>
+      <section class="explore-main">
+        <div class="chosen" id="subj-chosen"></div>
+        <div id="subj-results"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Results / article view -->
+  <main id="content-view" hidden>
+    <div class="subbar">
+      <div class="wrap">
+        <form class="search-form compact" id="bar-form" role="search">
+          <input type="search" id="bar-input" placeholder="Search articles" autocomplete="off" required>
+          <button type="submit" aria-label="Search">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="wrap" id="content"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <div>
+        <span class="logo small">STACKS</span>
+        <p>A practice project. Article content from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, available under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Photos from <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="subjects.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
