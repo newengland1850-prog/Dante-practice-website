@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="weather.css">
 </head>
 <body>
   <header class="topbar">
@@ -16,6 +17,7 @@
         <a href="#/">Search</a>
         <a href="#/explore">Explore</a>
         <a href="#/random">Random article</a>
+        <a href="#/weather" class="nav-weather">Weather</a>
       </nav>
     </div>
   </header>
@@ -118,6 +120,55 @@
     </div>
   </main>
 
+  <!-- Weather view -->
+  <main id="weather-view" hidden>
+    <!-- Animated scene that matches the current weather -->
+    <div class="wx-scene" id="wx-scene" aria-hidden="true"></div>
+    <div class="wrap wx-wrap">
+      <div class="wx-toolbar">
+        <div class="wx-search-box">
+          <input type="search" id="wx-search" placeholder="Add a city…" autocomplete="off" aria-label="Search for a city">
+          <div class="wx-results" id="wx-results" hidden></div>
+        </div>
+        <button type="button" class="wx-btn" id="wx-locate">My location</button>
+        <button type="button" class="wx-btn" id="wx-units" title="Switch °F / °C">°F</button>
+        <button type="button" class="wx-btn wx-btn-map" id="wx-map-btn">Weather map</button>
+        <button type="button" class="wx-btn" id="wx-reset" title="Go back to the original city list">Reset cities</button>
+      </div>
+      <div class="wx-strip" id="wx-strip" aria-label="Cities"></div>
+      <section class="wx-now glass" id="wx-now" role="button" tabindex="0" aria-label="Today's details"></section>
+      <section class="wx-days" id="wx-days" aria-label="5-day forecast"></section>
+      <section class="wx-map-panel glass" id="wx-map-panel" hidden aria-label="Weather map">
+        <div class="wx-map-head">
+          <h2>Weather map <small>next 36 hours</small></h2>
+          <div class="wx-map-layers" id="wx-map-layers" role="group" aria-label="Map layer">
+            <button type="button" data-layer="rain" aria-pressed="true">Rain</button>
+            <button type="button" data-layer="temp" aria-pressed="false">Temperature</button>
+            <button type="button" data-layer="clouds" aria-pressed="false">Clouds</button>
+            <button type="button" data-layer="wind" aria-pressed="false">Wind</button>
+          </div>
+          <button type="button" class="wx-close" id="wx-map-close" aria-label="Close map">×</button>
+        </div>
+        <div class="wx-map-wrap">
+          <div class="wx-map" id="wx-map"></div>
+          <div class="wx-map-readout" id="wx-map-readout" aria-live="polite"></div>
+          <button type="button" class="wx-btn wx-map-reload" id="wx-map-reload" hidden>Load forecast for this area</button>
+        </div>
+        <div class="wx-map-time">
+          <button type="button" class="wx-btn" id="wx-map-play">▶ Play</button>
+          <input type="range" id="wx-map-hour" min="0" max="36" step="1" value="0" aria-label="Hours ahead">
+          <span class="wx-map-label" id="wx-map-label"></span>
+        </div>
+        <div class="wx-map-foot">
+          <div class="wx-map-legend" id="wx-map-legend"></div>
+          <span class="wx-map-status" id="wx-map-status"></span>
+        </div>
+      </section>
+      <p class="wx-credit">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a><br><span id="wx-photo-credit"></span></p>
+    </div>
+    <dialog class="wx-detail" id="wx-detail"></dialog>
+  </main>
+
   <!-- Results / article view -->
   <main id="content-view" hidden>
     <div class="subbar">
@@ -143,6 +194,8 @@
   </footer>
 
   <script src="subjects.js"></script>
+  <script src="weather.js"></script>
+  <script src="weather-map.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ const API = "https://en.wikipedia.org/w/api.php";
 const homeView = document.getElementById("home-view");
 const exploreView = document.getElementById("explore-view");
 const subjectView = document.getElementById("subject-view");
+const weatherView = document.getElementById("weather-view");
 const contentView = document.getElementById("content-view");
 const content = document.getElementById("content");
 const barInput = document.getElementById("bar-input");
@@ -410,7 +411,10 @@ function route() {
   const isContent = view === "search" || view === "article" || view === "random";
   const isExplore = view === "explore";
   const isSubject = view === "subject" || view === "history";
-  homeView.hidden = isContent || isExplore || isSubject;
+  const isWeather = view === "weather";
+  homeView.hidden = isContent || isExplore || isSubject || isWeather;
+  weatherView.hidden = !isWeather;
+  if (!isWeather) stopWxFx(); // pause the weather animation off-page
   exploreView.hidden = !isExplore;
   subjectView.hidden = !isSubject;
   contentView.hidden = !isContent;
@@ -418,6 +422,8 @@ function route() {
 
   if (isExplore) {
     showExplore();
+  } else if (isWeather) {
+    showWeather();
   } else if (isSubject) {
     showSubject(view === "history" ? "History" : arg);
   } else if (!isContent) {

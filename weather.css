@@ -1,0 +1,463 @@
+/* Weather page (#/weather) */
+
+#weather-view { color: #fff; }
+
+/* ---- Background: real photo with slow, natural motion ---- */
+.wx-scene {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: #4a5765;
+}
+/* Very slow zoom and pan, like a camera drifting with the breeze */
+.wx-photo {
+  position: absolute;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  animation: wx-drift-cam 60s ease-in-out infinite alternate;
+}
+.wx-photo.dim { filter: brightness(0.38) saturate(0.7) hue-rotate(10deg); }
+/* Switching cities: the new photo (and its mist, rain or snow) fades in over the old one */
+.wx-photos, .wx-extras { position: absolute; inset: 0; }
+.wx-photo.fade-in { animation: wx-drift-cam 60s ease-in-out infinite alternate, wx-fade 1.2s ease-in-out; }
+.wx-extras.fade-in { animation: wx-fade 1.2s ease-in-out; }
+@keyframes wx-fade { from { opacity: 0; } }
+
+/* When a city photo doesn't already show the weather, grade it to match:
+   greyer and darker for rain, hazy for fog, cool and bright for snow. */
+.wx-photo.grade-cloudy { filter: saturate(0.55) brightness(0.88) contrast(0.95); }
+.wx-photo.grade-fog { filter: saturate(0.35) brightness(1.05) contrast(0.7) blur(1.5px); }
+.wx-photo.grade-drizzle, .wx-photo.grade-rain { filter: saturate(0.5) brightness(0.72) contrast(1.05); }
+.wx-photo.grade-heavy-rain, .wx-photo.grade-storm { filter: saturate(0.4) brightness(0.55) contrast(1.1); }
+.wx-photo.grade-snow, .wx-photo.grade-ice { filter: saturate(0.35) brightness(1.08) contrast(0.85) hue-rotate(-8deg); }
+.wx-photo.dim[class*="grade-"] { filter: brightness(0.35) saturate(0.5); }
+/* Tiles: tint the photo (not the icon and text) to match the weather */
+.wx-city[class*="grade-"]::before { background: linear-gradient(180deg, rgba(70, 80, 92, 0.45), rgba(20, 26, 34, 0.65)); }
+.wx-city.grade-snow::before, .wx-city.grade-ice::before, .wx-city.grade-fog::before { background: linear-gradient(180deg, rgba(230, 236, 242, 0.45), rgba(40, 48, 58, 0.55)); }
+@keyframes wx-drift-cam {
+  from { transform: scale(1.04) translate(-1.2%, 0.4%); }
+  to { transform: scale(1.1) translate(1.2%, -0.6%); }
+}
+
+/* Clouds and mist: soft blurred vapor drifting across */
+.wx-vapor {
+  position: absolute;
+  left: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(235, 238, 242, 0.32), rgba(235, 238, 242, 0) 68%);
+  filter: blur(18px);
+  animation: wx-vapor linear infinite;
+}
+.wx-vapor.fog { background: radial-gradient(ellipse at center, rgba(240, 240, 236, 0.5), rgba(240, 240, 236, 0) 70%); filter: blur(26px); }
+@keyframes wx-vapor { from { translate: -75vw 0; } to { translate: 110vw 0; } }
+
+.wx-fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* Lightning: a quick double flash that lights up the scene */
+.wx-flash { position: absolute; inset: 0; background: #dfe8ff; opacity: 0; mix-blend-mode: screen; }
+.wx-flash.on { animation: wx-bolt 1.1s ease-out; }
+@keyframes wx-bolt {
+  0% { opacity: 0; }
+  4% { opacity: 0.7; }
+  10% { opacity: 0.08; }
+  16% { opacity: 0.55; }
+  40%, 100% { opacity: 0; }
+}
+
+/* Gentle darkening so white text stays readable over any photo */
+.wx-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.12) 40%, rgba(0, 0, 0, 0.3));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-photo, .wx-vapor { animation: none; }
+}
+
+/* ---- Layout ---- */
+.wx-wrap { padding-top: 24px; padding-bottom: 40px; }
+.glass {
+  background: rgba(15, 25, 40, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+}
+
+.wx-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.wx-search-box { position: relative; flex: 1; min-width: 180px; max-width: 360px; }
+.wx-search-box input {
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+}
+.wx-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 5;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+.wx-results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  font: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.wx-results button:hover { background: var(--bg-soft); }
+.wx-results small { display: block; color: var(--muted); }
+.wx-results p { margin: 0; padding: 10px 12px; color: var(--muted); }
+.wx-btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(15, 25, 40, 0.35);
+  color: #fff;
+  cursor: pointer;
+}
+.wx-btn:hover { background: rgba(15, 25, 40, 0.55); }
+
+/* City scroller: each tile shows that city's weather photo, icon and temperature */
+.wx-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.7) rgba(255, 255, 255, 0.15);
+}
+.wx-strip::-webkit-scrollbar { height: 10px; }
+.wx-strip::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.15); border-radius: 999px; }
+.wx-strip::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.7); border-radius: 999px; }
+/* City tiles show a small photo of that city's current weather */
+.wx-city {
+  position: relative;
+  flex: 0 0 112px;
+  scroll-snap-align: start;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #4a5765 center / cover;
+  color: #fff;
+}
+.wx-city::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.5));
+}
+.wx-city.dim::before { background: rgba(5, 10, 25, 0.6); }
+.wx-city:has([aria-pressed="true"]) { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35); }
+.wx-city-pick {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px 9px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.wx-city .wx-icon { width: 42px; height: 42px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4)); }
+.wx-icon-loading { display: block; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+.wx-city-temp { font-size: 20px; font-weight: 700; }
+.wx-city-name { font-size: 13px; line-height: 1.2; text-align: center; }
+.wx-city-remove {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 22px; height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.wx-city-remove:hover, .wx-city-remove:focus-visible { opacity: 1; background: #c62828; }
+.wx-city-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-style: dashed;
+  background: rgba(15, 25, 40, 0.35);
+  font: inherit;
+  cursor: pointer;
+}
+.wx-city-add::before { display: none; }
+.wx-city-add:hover { background: rgba(15, 25, 40, 0.55); border-color: #fff; }
+.wx-add-plus { font-size: 34px; line-height: 1; font-weight: 300; }
+
+/* Current conditions: big and simple */
+.wx-now {
+  margin: 10px auto 18px;
+  max-width: 460px;
+  padding: 22px 20px 16px;
+  text-align: center;
+  cursor: pointer;
+}
+.wx-now:hover, .wx-now:focus-visible { transform: translateY(-2px); background: rgba(15, 25, 40, 0.42); outline: none; }
+.wx-now-place { font-size: 20px; font-weight: 600; }
+.wx-now-main { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.wx-now-main .wx-icon { width: 96px; height: 96px; }
+.wx-now-temp { font-family: var(--serif); font-size: 84px; font-weight: 600; line-height: 1; }
+.wx-now-label { font-size: 20px; }
+.wx-now-range { opacity: 0.9; margin-top: 2px; }
+.wx-chip {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 200, 60, 0.9);
+  color: #3a2a00;
+  font-size: 14px;
+  font-weight: 600;
+}
+.wx-hint { margin-top: 10px; font-size: 13px; opacity: 0.75; }
+.wx-status { margin: 20px 0; }
+
+/* 5-day forecast */
+.wx-days {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.wx-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.wx-day:hover { transform: translateY(-2px); background: rgba(15, 25, 40, 0.45); }
+.wx-day-name { font-weight: 700; }
+.wx-day .wx-icon { width: 54px; height: 54px; }
+.wx-day-label { font-size: 13px; text-align: center; min-height: 2.4em; line-height: 1.2; }
+.wx-day-chance {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.wx-day-temps { margin-top: 4px; }
+.wx-day-temps b { font-size: 18px; }
+
+.wx-credit { margin-top: 24px; font-size: 13px; text-align: center; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.wx-credit a { color: #fff; }
+
+/* ---- Detail panel ---- */
+.wx-detail {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(20, 30, 46, 0.92);
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.wx-detail::backdrop { background: rgba(0, 0, 0, 0.45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.wx-detail-inner { position: relative; padding: 22px; }
+.wx-close {
+  position: absolute;
+  top: 10px; right: 14px;
+  font-size: 28px;
+  line-height: 1;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+}
+.wx-detail-head { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; padding-right: 24px; }
+.wx-detail-head .wx-icon { width: 80px; height: 80px; flex: none; }
+.wx-detail-head h2 { font-family: var(--serif); font-weight: 600; margin: 0; font-size: 26px; }
+.wx-detail-head h2 small { font-family: var(--sans); font-weight: 400; font-size: 15px; opacity: 0.75; }
+.wx-detail-head p { margin: 2px 0 0; }
+.wx-detail-now { opacity: 0.85; font-size: 14px; }
+.wx-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.wx-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 14px;
+}
+.wx-card h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; }
+.wx-card p { margin: 0 0 8px; }
+.wx-card-body { display: flex; align-items: center; gap: 12px; }
+.wx-big { font-size: 22px; font-weight: 700; }
+.wx-muted { font-size: 13px; opacity: 0.75; }
+.wx-facts { list-style: none; margin: 0; padding: 0; }
+.wx-facts li { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.wx-facts li:last-child { border-bottom: 0; }
+
+/* Precipitation flask: fill rises, a drop falls in, the surface ripples */
+.wx-flask { width: 70px; flex: none; overflow: visible; }
+.wx-flask-fill { animation: wx-fill 1.6s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes wx-fill { from { transform: translateY(var(--level)); } }
+.wx-flask-wave { animation: wx-wave 2.2s linear infinite; }
+@keyframes wx-wave { to { transform: translateX(40px); } }
+.wx-flask-drop { animation: wx-drip 1.8s ease-in infinite; }
+@keyframes wx-drip {
+  0% { transform: translateY(-6px); opacity: 0; }
+  15% { opacity: 1; }
+  70% { transform: translateY(70px); opacity: 1; }
+  71%, 100% { transform: translateY(70px); opacity: 0; }
+}
+
+/* UV sun: rays spin faster and glow pulses harder at higher UV */
+.wx-uv-sun { width: 96px; flex: none; }
+.wx-uv-rays { transform-origin: 60px 60px; animation: wx-spin linear infinite; }
+@keyframes wx-spin { to { transform: rotate(360deg); } }
+.wx-uv-glow { transform-origin: 60px 60px; animation: wx-pulse 3s ease-in-out infinite; }
+@keyframes wx-pulse { 50% { transform: scale(1.1); } }
+
+.wx-travel { border-color: rgba(255, 200, 60, 0.55); }
+.wx-trip input {
+  width: 70px;
+  margin: 0 4px;
+  padding: 4px 6px;
+  font: inherit;
+  border-radius: 6px;
+  border: 0;
+}
+.wx-trip-out { font-weight: 700; margin-top: 8px !important; }
+
+.wx-hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.wx-hour {
+  flex: 1 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 14px;
+}
+.wx-hour .wx-icon { width: 36px; height: 36px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-flask-fill, .wx-flask-wave, .wx-flask-drop, .wx-uv-rays, .wx-uv-glow { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .wx-days { grid-template-columns: repeat(5, 120px); overflow-x: auto; padding-bottom: 6px; }
+  .wx-now-temp { font-size: 64px; }
+}
+
+/* ---- Weather map (36-hour forecast) ---- */
+.wx-btn-map { background: rgba(255, 255, 255, 0.92); color: var(--ink); border-color: #fff; }
+.wx-btn-map:hover { background: #fff; }
+.wx-map-panel { margin-top: 18px; padding: 16px; }
+.wx-map-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding-right: 30px; position: relative; }
+.wx-map-head h2 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 22px; }
+.wx-map-head h2 small { font-family: var(--sans); font-weight: 400; font-size: 14px; opacity: 0.75; }
+.wx-map-head .wx-close { top: -4px; right: 0; }
+.wx-map-layers { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.wx-map-layers button {
+  font: inherit;
+  font-size: 14px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.wx-map-layers button[aria-pressed="true"] { background: #fff; color: var(--ink); }
+.wx-map-wrap { position: relative; }
+.wx-map { height: min(60vh, 520px); border-radius: 12px; overflow: hidden; background: #1b1f24; }
+.wx-map-readout:not(:empty) {
+  position: absolute;
+  top: 10px; right: 10px;
+  z-index: 500;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(15, 20, 28, 0.85);
+  font-weight: 700;
+}
+.wx-map-reload { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(15, 25, 40, 0.85); }
+.wx-map-city { background: rgba(15, 20, 28, 0.85); color: #fff; border: 0; box-shadow: none; font-weight: 700; }
+.wx-map-city::before { display: none; }
+.wx-map-time { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.wx-map-time input { flex: 1; accent-color: #fff; }
+.wx-map-label { min-width: 150px; font-weight: 700; text-align: right; }
+.wx-map-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.wx-map-legend { flex: 1; max-width: 420px; }
+.wx-legend-bar { height: 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.3); }
+.wx-legend-labels { display: flex; justify-content: space-between; font-size: 12px; opacity: 0.85; margin-top: 2px; }
+.wx-map-status { font-size: 14px; opacity: 0.85; }
+.wx-map .leaflet-control-attribution { font-size: 10px; }
+
+@media (max-width: 640px) {
+  .wx-map-layers { margin-left: 0; }
+  .wx-map-label { min-width: 0; }
+}
+
+/* Switching cities: the details crossfade in step with the background photo (1.2s) */
+.wx-wrap { position: relative; }
+.wx-ghost {
+  position: absolute;
+  margin: 0;
+  pointer-events: none;
+  animation: wx-fade-out 1.2s ease-in-out forwards;
+}
+/* The ghost only carries the old text and icons; the cards themselves stay put */
+.wx-ghost.glass, .wx-ghost .glass {
+  background: transparent;
+  border-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.wx-now.wx-xf-in > *, .wx-days.wx-xf-in .wx-day > * { animation: wx-fade 1.2s ease-in-out; }
+@keyframes wx-fade-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .wx-photo.fade-in, .wx-extras.fade-in { animation-duration: 0.01s; }
+}
+/* While a picked city loads, a light shimmer runs along the bottom of its tile */
+.wx-city.loading::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #fff, transparent) no-repeat;
+  background-size: 50% 100%;
+  animation: wx-shimmer 1s linear infinite;
+}
+@keyframes wx-shimmer { from { background-position: -50% 0; } to { background-position: 150% 0; } }

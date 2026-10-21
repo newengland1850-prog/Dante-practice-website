@@ -497,7 +497,7 @@ a { color: var(--link); }
 }
 
 @media (max-width: 640px) {
-  .topnav a:not(:first-child) { display: none; }
+  .topnav a:not(:first-child):not(.nav-weather) { display: none; }
   .hero { padding: 56px 0 64px; }
   .article-body .infobox { float: none; width: 100%; margin: 0 0 16px; }
 }
