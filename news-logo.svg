@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Worldwide National Movement logo: a shield with five stars (one per country) over a folded newspaper. -->
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c4f9c"/>
+      <stop offset="1" stop-color="#0a2148"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d6e8fb"/>
+    </linearGradient>
+    <path id="star" d="M0 -17 L5 -5.5 L17.5 -5.2 L7.8 2.6 L11.2 14.6 L0 7.6 L-11.2 14.6 L-7.8 2.6 L-17.5 -5.2 L-5 -5.5 Z"/>
+  </defs>
+  <path d="M256 28 L452 92 V250 C452 368 368 446 256 486 C144 446 60 368 60 250 V92 Z" fill="url(#shield)" stroke="#8fd0ff" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M256 60 L424 115 V250 C424 352 352 420 256 456 C160 420 88 352 88 250 V115 Z" fill="none" stroke="#5ea9e8" stroke-width="3" opacity=".6"/>
+  <!-- Five stars in an arc -->
+  <use href="#star" transform="translate(166 150)" fill="#ffffff"/>
+  <use href="#star" transform="translate(211 128)" fill="#ffffff"/>
+  <use href="#star" transform="translate(256 120) scale(1.2)" fill="#ffffff"/>
+  <use href="#star" transform="translate(301 128)" fill="#ffffff"/>
+  <use href="#star" transform="translate(346 150)" fill="#ffffff"/>
+  <!-- Folded newspaper -->
+  <g transform="translate(256 292)">
+    <path d="M-120 -70 H96 V78 H-110 A10 10 0 0 1 -120 68 Z" fill="url(#paper)"/>
+    <path d="M96 -46 H120 V68 A10 10 0 0 1 110 78 H96 Z" fill="#b7d3f2"/>
+    <rect x="-104" y="-56" width="184" height="22" rx="3" fill="#0a2148"/>
+    <rect x="-104" y="-22" width="84" height="56" rx="3" fill="#5ea9e8"/>
+    <g fill="#9cb7d6">
+      <rect x="-10" y="-22" width="90" height="8" rx="2"/>
+      <rect x="-10" y="-6" width="90" height="8" rx="2"/>
+      <rect x="-10" y="10" width="90" height="8" rx="2"/>
+      <rect x="-10" y="26" width="60" height="8" rx="2"/>
+      <rect x="-104" y="46" width="184" height="8" rx="2"/>
+      <rect x="-104" y="60" width="140" height="8" rx="2"/>
+    </g>
+  </g>
+</svg>

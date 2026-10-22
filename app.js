@@ -1,10 +1,12 @@
 // Wikipedia's API is free and needs no key. `origin=*` enables CORS for browser requests.
 const API = "https://en.wikipedia.org/w/api.php";
 
-const homeView = document.getElementById("home-view");
+const frontView = document.getElementById("front-view");
+const homeView = document.getElementById("home-view"); // Stacks, the encyclopedia front page
 const exploreView = document.getElementById("explore-view");
 const subjectView = document.getElementById("subject-view");
 const weatherView = document.getElementById("weather-view");
+const newsView = document.getElementById("news-view");
 const contentView = document.getElementById("content-view");
 const content = document.getElementById("content");
 const barInput = document.getElementById("bar-input");
@@ -412,7 +414,12 @@ function route() {
   const isExplore = view === "explore";
   const isSubject = view === "subject" || view === "history";
   const isWeather = view === "weather";
-  homeView.hidden = isContent || isExplore || isSubject || isWeather;
+  const isNews = view === "news";
+  const isStacks = view === "stacks";
+  const isFront = !(isContent || isExplore || isSubject || isWeather || isNews || isStacks);
+  frontView.hidden = !isFront;
+  homeView.hidden = !isStacks;
+  newsView.hidden = !isNews;
   weatherView.hidden = !isWeather;
   if (!isWeather) stopWxFx(); // pause the weather animation off-page
   exploreView.hidden = !isExplore;
@@ -422,11 +429,15 @@ function route() {
 
   if (isExplore) {
     showExplore();
+  } else if (isNews) {
+    showNews();
   } else if (isWeather) {
     showWeather();
   } else if (isSubject) {
     showSubject(view === "history" ? "History" : arg);
-  } else if (!isContent) {
+  } else if (isFront) {
+    showFront();
+  } else if (isStacks) {
     document.title = "Stacks — Search the Encyclopedia";
   } else if (view === "search") {
     showSearch(arg);
@@ -447,6 +458,25 @@ function onSubmit(input) {
 
 document.getElementById("hero-form").addEventListener("submit", onSubmit(document.getElementById("hero-input")));
 document.getElementById("bar-form").addEventListener("submit", onSubmit(barInput));
+// Phone menu: open/close, and close after picking a tab.
+const menuBtn = document.getElementById("menu-btn");
+menuBtn.addEventListener("click", () => {
+  const open = document.body.classList.toggle("menu-open");
+  menuBtn.setAttribute("aria-expanded", String(open));
+});
+document.getElementById("topnav").addEventListener("click", e => {
+  if (e.target.closest("a")) {
+    document.body.classList.remove("menu-open");
+    menuBtn.setAttribute("aria-expanded", "false");
+  }
+});
+
 window.addEventListener("hashchange", route);
 startHeroSlideshow();
 route();
+
+// Installable app: the service worker only runs from a web address (http://localhost:8080
+// or a real site), not when index.html is opened as a file.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => { /* the site works without it */ });
+}

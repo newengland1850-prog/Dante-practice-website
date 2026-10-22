@@ -998,7 +998,7 @@ function wxSelect(i) {
 let wxReady = false;
 
 function showWeather() {
-  document.title = "Weather — Stacks";
+  document.title = "Weather — All Points Towards Progress";
   if (!wxReady) {
     wxReady = true;
     wxLoadPrefs();

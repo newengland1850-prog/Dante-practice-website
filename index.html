@@ -2,28 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stacks — Search the Encyclopedia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>All Points Towards Progress</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Installable as an app on phones and desktops (see README: Mobile app) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#800020">
+  <link rel="icon" href="news-logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Progress">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="weather.css">
+  <link rel="stylesheet" href="news.css">
+  <link rel="stylesheet" href="front.css">
 </head>
 <body>
   <header class="topbar">
     <div class="wrap topbar-inner">
-      <a href="#/" class="logo" aria-label="Stacks home">STACKS</a>
-      <nav class="topnav">
-        <a href="#/">Search</a>
+      <a href="#/" class="logo" aria-label="All Points Towards Progress home">All Points Towards Progress</a>
+      <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><span></span><span></span><span></span></button>
+      <nav class="topnav" id="topnav">
+        <a href="#/stacks">Stacks</a>
         <a href="#/explore">Explore</a>
         <a href="#/random">Random article</a>
         <a href="#/weather" class="nav-weather">Weather</a>
+        <a href="#/news" class="nav-news">Worldwide National Movement</a>
       </nav>
     </div>
   </header>
 
   <!-- Home view -->
-  <main id="home-view">
+  <!-- Front page: All Points Towards Progress -->
+  <main id="front-view">
+    <!-- Fixed background: faded yellow and pink, red from the top, green from the bottom -->
+    <div class="front-bg" aria-hidden="true"></div>
+    <div class="wrap front-wrap">
+      <section class="front-banner" aria-roledescription="carousel" aria-label="Featured pictures">
+        <div class="front-slides" id="front-slides"></div>
+        <div class="front-banner-text">
+          <h1>All Points Towards Progress</h1>
+          <p>Knowledge, weather and world news, all in one place.</p>
+        </div>
+        <button type="button" class="front-arrow prev" id="front-prev" aria-label="Previous picture">‹</button>
+        <button type="button" class="front-arrow next" id="front-next" aria-label="Next picture">›</button>
+        <div class="front-dots" id="front-dots" role="tablist" aria-label="Pictures"></div>
+        <a class="front-credit" id="front-credit" target="_blank" rel="noopener"></a>
+      </section>
+
+      <section class="front-tabs" id="front-tabs" aria-label="Sections"></section>
+
+      <div class="front-mobile">
+        <button type="button" class="front-mobile-btn" id="front-mobile-btn">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18.2" r="1.2" fill="currentColor"/></svg>
+          <span id="front-mobile-label">Mobile version</span>
+        </button>
+        <p id="front-mobile-note">See how the site looks and works on a phone.</p>
+      </div>
+    </div>
+
+    <!-- Phone-sized preview of the site -->
+    <dialog class="phone-preview" id="phone-preview" aria-label="Mobile version preview">
+      <div class="phone-bar">
+        <strong>Mobile version</strong>
+        <div class="phone-pages" id="phone-pages">
+          <button type="button" data-page="#/">Home</button>
+          <button type="button" data-page="#/stacks">Stacks</button>
+          <button type="button" data-page="#/weather">Weather</button>
+          <button type="button" data-page="#/news">News</button>
+        </div>
+        <button type="button" class="phone-install" id="phone-install" hidden>Install app</button>
+        <button type="button" class="phone-close" id="phone-close" aria-label="Close preview">×</button>
+      </div>
+      <div class="phone-stage" id="phone-stage">
+        <div class="phone-frame" id="phone-frame">
+          <div class="phone-notch" aria-hidden="true"></div>
+          <iframe id="phone-iframe" title="The site at phone size"></iframe>
+        </div>
+      </div>
+      <p class="phone-tip" id="phone-tip">This is the real site at phone size: tap around. To put it on your phone, open the site there and choose
+        "Install app" (Android) or Share → "Add to Home Screen" (iPhone).</p>
+    </dialog>
+  </main>
+
+  <!-- Stacks: the encyclopedia front page (#/stacks) -->
+  <main id="home-view" hidden>
     <!-- Stays put while the page scrolls over it -->
     <div class="home-art" aria-hidden="true"></div>
     <section class="hero">
@@ -169,6 +233,81 @@
     <dialog class="wx-detail" id="wx-detail"></dialog>
   </main>
 
+  <!-- Worldwide National Movement view -->
+  <main id="news-view" hidden>
+    <!-- Fixed background: light-to-dark blue with the logo in the middle; stays put while scrolling -->
+    <div class="news-bg" aria-hidden="true"><img class="news-watermark" src="news-logo.svg" alt=""></div>
+    <div class="news-scrim" id="news-scrim"></div>
+    <!-- Stock ticker across the top: the 25 largest S&P 500 companies, scrolling right to left -->
+    <section class="news-ticker" aria-label="Top 25 S&amp;P 500 stocks">
+      <div class="news-ticker-label">
+        <b>S&amp;P 500 · Top 25</b>
+        <span class="news-stocks-time" id="news-stocks-time"></span>
+      </div>
+      <div class="news-ticker-window" tabindex="0">
+        <div class="news-ticker-track" id="news-stocks-list"></div>
+      </div>
+    </section>
+    <div class="wrap news-layout">
+      <div class="news-left">
+        <aside class="news-side" id="news-side" aria-label="Feed settings">
+          <div class="news-side-head">
+            <h2>Your feed</h2>
+            <button type="button" class="news-side-close" id="news-side-close" aria-label="Close filters">×</button>
+          </div>
+          <label class="news-switch"><input type="checkbox" id="news-translate" checked> <span>Translate stories into English</span></label>
+
+          <div class="news-group">
+            <div class="news-group-head"><h3>Type of news</h3><span><button type="button" data-all="types:all">All</button> · <button type="button" data-all="types:none">None</button></span></div>
+            <div id="news-types"></div>
+          </div>
+          <div class="news-group">
+            <div class="news-group-head"><h3>Country</h3><span><button type="button" data-all="countries:all">All</button> · <button type="button" data-all="countries:none">None</button></span></div>
+            <div id="news-countries"></div>
+          </div>
+          <div class="news-group">
+            <div class="news-group-head"><h3>News sites</h3><span><button type="button" data-all="sources:all">All</button> · <button type="button" data-all="sources:none">None</button></span></div>
+            <div id="news-sources"></div>
+          </div>
+          <div class="news-group">
+            <h3>Translate anything</h3>
+            <form class="news-tr" id="news-tr-form">
+              <textarea id="news-tr-in" rows="3" placeholder="Paste text in any language…" aria-label="Text to translate"></textarea>
+              <button type="submit" class="news-btn">Translate to English</button>
+              <p class="news-tr-out" id="news-tr-out" aria-live="polite"></p>
+            </form>
+          </div>
+        </aside>
+      </div>
+
+      <section class="news-main">
+        <header class="news-head">
+          <img class="news-head-logo" src="news-logo.svg" alt="">
+          <div>
+            <h1>Worldwide National Movement</h1>
+            <p>Right-leaning outlets from the United States, United Kingdom, France, Germany and Poland</p>
+          </div>
+        </header>
+        <div class="news-toolbar">
+          <button type="button" class="news-btn news-filter-btn" id="news-filter-btn" aria-expanded="false" aria-controls="news-side">Filters</button>
+          <span class="news-count" id="news-count"></span>
+          <span class="news-status" id="news-status" aria-live="polite"></span>
+          <button type="button" class="news-btn" id="news-refresh">Refresh</button>
+        </div>
+        <div class="news-offline" id="news-offline" hidden>
+          <h2>Start the news server</h2>
+          <p>News, translation and stock prices come through a small server that runs on this computer
+            (browsers can't read other news sites directly). To start it, double-click
+            <b>start.bat</b> in the project folder. It opens this page at <b>http://localhost:8080</b>.</p>
+          <p>Or run <code>node server.js</code> in the project folder and open
+            <a href="http://localhost:8080/#/news">http://localhost:8080/#/news</a>.</p>
+        </div>
+        <div class="news-feed" id="news-feed"></div>
+        <button type="button" class="news-btn news-more" id="news-more" hidden>Show more stories</button>
+      </section>
+    </div>
+  </main>
+
   <!-- Results / article view -->
   <main id="content-view" hidden>
     <div class="subbar">
@@ -187,13 +326,17 @@
   <footer class="footer">
     <div class="wrap footer-inner">
       <div>
-        <span class="logo small">STACKS</span>
+        <span class="logo small">All Points Towards Progress</span>
         <p>A practice project. Article content from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a>, available under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Photos from <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>.</p>
       </div>
     </div>
   </footer>
 
+  <script src="config.js"></script>
   <script src="subjects.js"></script>
+  <script src="news-sources.js"></script>
+  <script src="news.js"></script>
+  <script src="front.js"></script>
   <script src="weather.js"></script>
   <script src="weather-map.js"></script>
   <script src="app.js"></script>
