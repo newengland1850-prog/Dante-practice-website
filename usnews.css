@@ -1,0 +1,195 @@
+/* US News Bias Check (#/usnews). Cards, sidebar and layout reuse news.css; this adds the
+   red-white-blue background, the coverage band and the bias check. */
+
+/* Lean colors are global: the Worldwide National Movement tab uses them too. */
+:root {
+  --lean-far-left: #0f3a86;
+  --lean-left: #1f5fbf;
+  --lean-center-left: #6d9be0;
+  --lean-center: #8b84a6;
+  --lean-center-right: #e48a84;
+  --lean-right: #c62828;
+  --lean-far-right: #7e1010;
+}
+
+/* Fixed background: faded blue on the left, white in the middle, red on the right */
+.usn-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(100deg, #9cbcec 0%, #d6e3f7 30%, #f6f3ee 50%, #f6dcd8 70%, #e8a39d 100%);
+}
+.usn-bg .news-watermark { opacity: 0.12; }
+
+/* Lean colors, used for dots, badges and the band */
+.lean-far-left { --c: var(--lean-far-left); }
+.lean-left { --c: var(--lean-left); }
+.lean-center-left { --c: var(--lean-center-left); }
+.lean-center { --c: var(--lean-center); }
+.lean-center-right { --c: var(--lean-center-right); }
+.lean-right { --c: var(--lean-right); }
+.lean-far-right { --c: var(--lean-far-right); }
+.usn-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.news-check .usn-dot { margin-right: -2px; }
+.news-source-country .usn-dot { margin-right: 4px; vertical-align: -1px; }
+.usn-lean { padding: 1px 8px; border-radius: 999px; background: var(--c); color: #fff; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.usn-lean.lean-center { background: #6f6990; }
+
+#usnews-view .news-head h1, #usnews-view .news-side h2, #usnews-view .news-count { color: #1d2b4f; }
+#usnews-view .news-btn { background: #1d2b4f; }
+#usnews-view .news-btn:hover { background: #2f6fd0; }
+#usnews-view .news-switch { background: #eef1f8; color: #1d2b4f; }
+#usnews-view .news-source { color: #1d2b4f; }
+
+/* ---- Coverage band across the top ---- */
+.usn-balance { background: #1d2b4f; color: #fff; border-bottom: 3px solid #c9a23a; box-shadow: 0 4px 14px rgba(20, 30, 60, 0.25); }
+.usn-balance:empty { display: none; }
+.usn-bal-inner { display: flex; align-items: center; gap: 18px; padding-top: 8px; padding-bottom: 8px; }
+.usn-bal-title { flex: none; display: flex; flex-direction: column; gap: 2px; line-height: 1.2; font-size: 15px; }
+.usn-bal-title > span { font-weight: 400; font-size: 12px; opacity: 0.8; }
+.usn-bal-avg { display: flex; align-items: center; gap: 6px; margin-top: 3px; opacity: 1 !important; }
+.usn-bal-avg .usn-slant-num { min-width: 0; font-size: 12px; }
+.usn-bal-bars { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.usn-bal-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px; }
+.usn-bal-label { font-size: 12px; opacity: 0.8; }
+.usn-bal-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: rgba(255, 255, 255, 0.1); }
+.usn-bal-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3px;
+  background: var(--c);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.usn-bal-bar span + span { border-left: 1px solid rgba(29, 43, 79, 0.6); }
+.w-left { --c: #2f6fd0; }
+.w-mixed { --c: #8b6fb8; }
+.w-neutral { --c: #7d8597; }
+.w-right { --c: #d23a3a; }
+
+/* ---- Buzzword highlights ---- */
+mark.bz-l, mark.bz-r, mark.bz-x { color: inherit; padding: 0 2px; border-radius: 3px; }
+mark.bz-l { background: rgba(47, 111, 208, 0.18); box-shadow: inset 0 -2px 0 #2f6fd0; }
+mark.bz-r { background: rgba(210, 58, 58, 0.16); box-shadow: inset 0 -2px 0 #d23a3a; }
+mark.bz-x { background: rgba(230, 170, 30, 0.22); box-shadow: inset 0 -2px 0 #d9971a; }
+
+/* ---- Bias check box on each card ---- */
+.usn-check {
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f4f5f9;
+  border: 1px solid #e1e4ee;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.usn-check-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.usn-check-label { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+.usn-verdict { font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #e3e6ee; color: #3a4256; }
+.usn-verdict.v-left { background: #dce8fb; color: #1f4f9a; }
+.usn-verdict.v-right { background: #fbe0de; color: #9c2323; }
+.usn-verdict.v-mixed { background: #ece4f6; color: #5b3f8a; }
+/* Slant bar: −100 (left) to +100 (right), with the number beside it */
+.usn-slant { display: flex; align-items: center; gap: 8px; }
+.usn-slant-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2f6fd0 0%, #9cb6e6 30%, #d9d6e2 50%, #eba8a3 70%, #d23a3a 100%);
+}
+.usn-slant-mark {
+  position: absolute;
+  top: -4px;
+  width: 6px;
+  height: 16px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: #1d2b4f;
+  box-shadow: 0 0 0 2px #fff;
+}
+.usn-slant-scale {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted);
+}
+.usn-slant-scale i { font-style: normal; }
+.usn-slant-num {
+  flex: none;
+  min-width: 70px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.usn-slant-num.s-left { background: #2f6fd0; }
+.usn-slant-num.s-center { background: #6f6990; }
+.usn-slant-num.s-right { background: #d23a3a; }
+.usn-pair { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.usn-score { color: #3a4256; font-weight: 600; font-variant-numeric: tabular-nums; margin-right: 6px; }
+.usn-words { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.usn-wl { color: var(--muted); font-weight: 600; margin-left: 2px; }
+.usn-words .bz-l, .usn-words .bz-r, .usn-words .bz-x { padding: 0 6px; border-radius: 999px; font-weight: 600; }
+.usn-words .bz-l { background: #dce8fb; color: #1f4f9a; }
+.usn-words .bz-r { background: #fbe0de; color: #9c2323; }
+.usn-words .bz-x { background: #fcefd2; color: #85570a; }
+.usn-check-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--muted); }
+.usn-full {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid #1d2b4f;
+  border-radius: 999px;
+  background: #fff;
+  color: #1d2b4f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.usn-full:hover { background: #1d2b4f; color: #fff; }
+.usn-full:disabled { opacity: 0.7; cursor: progress; }
+.usn-note { color: #8a5a00; }
+
+/* ---- How it works ---- */
+.usn-how summary { cursor: pointer; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #3f5b80; }
+.usn-how p { font-size: 13px; margin: 8px 0 0; color: #3d3d3d; }
+
+@media (max-width: 640px) {
+  .usn-bal-inner { flex-direction: column; align-items: stretch; gap: 6px; }
+  .usn-bal-title { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .usn-bal-avg { margin-top: 0; }
+  .usn-bal-row { grid-template-columns: 64px minmax(0, 1fr); }
+  .usn-full { margin-left: 0; }
+  .usn-bal-bar span.sm { font-size: 0; }
+}
+
+/* ---- Subscription disclaimer ---- */
+.usn-paywall-slot:empty { display: none; }
+.usn-paywall {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.usn-paywall svg { flex: none; margin-top: 1px; }
+.usn-paywall.pw-hard { background: #fde8e4; color: #8a1f12; border: 1px solid #f3c2b8; }
+.usn-paywall.pw-metered, .usn-paywall.pw-some { background: #fff4d9; color: #6b4a00; border: 1px solid #f0d998; }

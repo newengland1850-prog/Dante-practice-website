@@ -120,6 +120,7 @@
 .front-tab:hover, .front-tab:focus-visible { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(90, 30, 30, 0.2); }
 .front-tab-img { display: block; height: 120px; background-size: cover; background-position: center; }
 .front-tab-img.logo { background-color: #0b2a5b; background-size: auto 80%; background-repeat: no-repeat; }
+.front-tab-img.logo.light { background-color: #e9eef7; }
 .front-tab-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 16px; }
 .front-tab-title { font-family: var(--serif); font-weight: 600; font-size: 19px; line-height: 1.2; color: #7a1c1c; }
 .front-tab-text { font-size: 14px; color: var(--muted); }

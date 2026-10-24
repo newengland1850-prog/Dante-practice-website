@@ -262,6 +262,8 @@ function wxmInit() {
   wxm.map.getPane("labels").style.zIndex = 450;
   wxm.map.getPane("labels").style.pointerEvents = "none";
   L.tileLayer(`${esri}World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16, pane: "labels" }).addTo(wxm.map);
+  // Show the map credits under the map instead of in its corner (Leaflet keeps them up to date there).
+  document.getElementById("wx-map-credits").appendChild(wxm.map.attributionControl.getContainer());
 
   // Hover (or tap) to read the forecast value at that spot.
   const readout = document.getElementById("wx-map-readout");

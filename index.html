@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>All Points Towards Progress</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
   <!-- Installable as an app on phones and desktops (see README: Mobile app) -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#800020">
@@ -16,7 +16,9 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="weather.css">
   <link rel="stylesheet" href="news.css">
+  <link rel="stylesheet" href="usnews.css">
   <link rel="stylesheet" href="front.css">
+  <link rel="stylesheet" href="traffic.css">
 </head>
 <body>
   <header class="topbar">
@@ -28,6 +30,8 @@
         <a href="#/explore">Explore</a>
         <a href="#/random">Random article</a>
         <a href="#/weather" class="nav-weather">Weather</a>
+        <a href="#/traffic" class="nav-traffic">Traffic</a>
+        <a href="#/usnews" class="nav-usnews">US News</a>
         <a href="#/news" class="nav-news">Worldwide National Movement</a>
       </nav>
     </div>
@@ -218,6 +222,8 @@
           <div class="wx-map-readout" id="wx-map-readout" aria-live="polite"></div>
           <button type="button" class="wx-btn wx-map-reload" id="wx-map-reload" hidden>Load forecast for this area</button>
         </div>
+        <!-- Map credits (Leaflet and data sources) sit under the map, not on it -->
+        <div class="map-credits" id="wx-map-credits"></div>
         <div class="wx-map-time">
           <button type="button" class="wx-btn" id="wx-map-play">▶ Play</button>
           <input type="range" id="wx-map-hour" min="0" max="36" step="1" value="0" aria-label="Hours ahead">
@@ -248,6 +254,26 @@
         <div class="news-ticker-track" id="news-stocks-list"></div>
       </div>
     </section>
+    <!-- Games window, opened from the sidebar card -->
+    <dialog class="games-dialog" id="games-dialog" aria-labelledby="games-title">
+      <div class="games-head">
+        <h2 id="games-title">Trivia &amp; puzzles</h2>
+        <span class="games-total"><b id="games-points">0</b> points</span>
+        <button type="button" class="stock-close" id="games-close" aria-label="Close">×</button>
+      </div>
+      <div class="games-tabbar" id="games-tabs" role="tablist" aria-label="Games"></div>
+      <div class="games-panel" id="games-panel"></div>
+    </dialog>
+    <!-- One stock's past month, opened by clicking it in the ticker -->
+    <dialog class="stock-dialog" id="stock-dialog" aria-labelledby="stock-title">
+      <div class="stock-head">
+        <h2 id="stock-title">Stock</h2>
+        <button type="button" class="stock-close" id="stock-close" aria-label="Close">×</button>
+      </div>
+      <div id="stock-body"></div>
+    </dialog>
+    <!-- How the stories split between center right, right and far right outlets -->
+    <section class="usn-balance news-leanbar" id="news-leanbar" aria-label="Outlet leaning"></section>
     <div class="wrap news-layout">
       <div class="news-left">
         <aside class="news-side" id="news-side" aria-label="Feed settings">
@@ -257,6 +283,10 @@
           </div>
           <label class="news-switch"><input type="checkbox" id="news-translate" checked> <span>Translate stories into English</span></label>
 
+          <div class="news-group">
+            <div class="news-group-head"><h3>Outlet leaning</h3><span><button type="button" data-all="leans:all">All</button> · <button type="button" data-all="leans:none">None</button></span></div>
+            <div id="news-leans"></div>
+          </div>
           <div class="news-group">
             <div class="news-group-head"><h3>Type of news</h3><span><button type="button" data-all="types:all">All</button> · <button type="button" data-all="types:none">None</button></span></div>
             <div id="news-types"></div>
@@ -276,6 +306,11 @@
               <button type="submit" class="news-btn">Translate to English</button>
               <p class="news-tr-out" id="news-tr-out" aria-live="polite"></p>
             </form>
+          </div>
+          <!-- Games (news-games.js): this card opens them in their own window -->
+          <div class="news-group news-games">
+            <h3>Trivia &amp; puzzles</h3>
+            <div id="games-card"></div>
           </div>
         </aside>
       </div>
@@ -302,13 +337,175 @@
           <p>Or run <code>node server.js</code> in the project folder and open
             <a href="http://localhost:8080/#/news">http://localhost:8080/#/news</a>.</p>
         </div>
+        <section class="news-live" id="news-live" aria-label="Watch live" hidden></section>
+        <section class="news-breaking" id="news-breaking" aria-label="Breaking news" hidden></section>
         <div class="news-feed" id="news-feed"></div>
         <button type="button" class="news-btn news-more" id="news-more" hidden>Show more stories</button>
       </section>
     </div>
+    <!-- How outlets are placed in their leaning groups (filled in by news.js) -->
+    <div class="wrap"><section class="news-method" id="news-method" aria-label="How we sort outlets by political leaning"></section></div>
   </main>
 
   <!-- Results / article view -->
+  <!-- US News (#/usnews): major US outlets from left to right, with a bias check on every story -->
+  <main id="usnews-view" hidden>
+    <div class="usn-bg" aria-hidden="true"><img class="news-watermark" src="usnews-logo.svg" alt=""></div>
+    <div class="news-scrim" id="usn-scrim"></div>
+    <!-- Coverage balance across the top (in place of the other news tab's stock ticker) -->
+    <section class="usn-balance" id="usn-balance" aria-label="Coverage balance"></section>
+    <div class="wrap news-layout">
+      <div class="news-left">
+        <aside class="news-side" id="usn-side" aria-label="Feed settings">
+          <div class="news-side-head">
+            <h2>Your feed</h2>
+            <button type="button" class="news-side-close" id="usn-side-close" aria-label="Close filters">×</button>
+          </div>
+          <label class="news-switch"><input type="checkbox" id="usn-balance-toggle" checked> <span>Balance the feed (take turns left to right)</span></label>
+
+          <div class="news-group">
+            <div class="news-group-head"><h3>Outlet leaning</h3><span><button type="button" data-all="leans:all">All</button> · <button type="button" data-all="leans:none">None</button></span></div>
+            <div id="usn-leans"></div>
+          </div>
+          <div class="news-group">
+            <div class="news-group-head"><h3>Story wording</h3><span><button type="button" data-all="wording:all">All</button> · <button type="button" data-all="wording:none">None</button></span></div>
+            <div id="usn-wording"></div>
+          </div>
+          <div class="news-group">
+            <div class="news-group-head"><h3>Type of news</h3><span><button type="button" data-all="types:all">All</button> · <button type="button" data-all="types:none">None</button></span></div>
+            <div id="usn-types"></div>
+          </div>
+          <div class="news-group">
+            <div class="news-group-head"><h3>News outlets</h3><span><button type="button" data-all="sources:all">All</button> · <button type="button" data-all="sources:none">None</button></span></div>
+            <div id="usn-sources"></div>
+          </div>
+          <details class="news-group usn-how">
+            <summary>How the bias check works</summary>
+            <p><b>Outlet:</b> each outlet's overall leaning, roughly in line with public media-bias charts such as
+              <a href="https://www.allsides.com/media-bias/ratings" target="_blank" rel="noopener">AllSides</a> and
+              <a href="https://adfontesmedia.com/interactive-media-bias-chart/" target="_blank" rel="noopener">Ad Fontes Media</a>.</p>
+            <p><b>Wording:</b> the story is scanned for phrases one side tends to use more
+              (<mark class="bz-l">undocumented immigrants</mark>, <mark class="bz-l">gun safety</mark> …
+              <mark class="bz-r">illegal aliens</mark>, <mark class="bz-r">gun rights</mark> …) and for
+              <mark class="bz-x">loaded</mark> words like “slams” or “bombshell”.</p>
+            <p><b>Slant:</b> one number from −100 (left) to +100 (right). The outlet counts for most of it (Far Left −100, Left −67, Center Left −33, Center 0, Center Right +33, Right +67, Far Right +100); the wording counts more the more buzzwords a story has, up to 60% of the score. Anything within 15 of zero shows as Center.</p>
+            <p>It is a word count, not a judgment of accuracy or fairness. Neutral wording can still leave things out, and one phrase can tip a short headline.</p>
+          </details>
+        </aside>
+      </div>
+
+      <section class="news-main">
+        <header class="news-head usn-head">
+          <img class="news-head-logo" src="usnews-logo.svg" alt="">
+          <div>
+            <h1>US News Bias Check</h1>
+            <p>Major American news outlets, left to right, with every story checked for slant and buzzwords</p>
+          </div>
+        </header>
+        <div class="news-toolbar">
+          <button type="button" class="news-btn news-filter-btn" id="usn-filter-btn" aria-expanded="false" aria-controls="usn-side">Filters</button>
+          <span class="news-count" id="usn-count"></span>
+          <span class="news-status" id="usn-status" aria-live="polite"></span>
+          <button type="button" class="news-btn" id="usn-refresh">Refresh</button>
+        </div>
+        <div class="news-offline" id="usn-offline" hidden>
+          <h2>Start the news server</h2>
+          <p>News and article checks come through a small server that runs on this computer. To start it, double-click
+            <b>start.bat</b> in the project folder, or run <code>node server.js</code> and open
+            <a href="http://localhost:8080/#/usnews">http://localhost:8080/#/usnews</a>.</p>
+        </div>
+        <section class="news-live" id="usn-live" aria-label="Watch live" hidden></section>
+        <section class="news-breaking" id="usn-breaking" aria-label="Breaking news" hidden></section>
+        <div class="news-feed" id="usn-feed"></div>
+        <button type="button" class="news-btn news-more" id="usn-more" hidden>Show more stories</button>
+      </section>
+    </div>
+    <div class="wrap"><section class="news-method" id="usn-method" aria-label="How we sort outlets by political leaning"></section></div>
+  </main>
+
+  <!-- Traffic (#/traffic): typical traffic through the day, trip times, local stores (US only) -->
+  <main id="traffic-view" hidden>
+    <div class="tr-bg" aria-hidden="true"></div>
+    <div class="wrap tr-wrap">
+      <header class="tr-head">
+        <div>
+          <p class="tr-kicker">United States · <span id="tr-city-name">Whole country</span></p>
+          <h1>Traffic</h1>
+          <p class="tr-sub">Typical traffic across the whole country through the day. Zoom in anywhere for street-level roads, see how long your trip should take, and find the best local stores nearby.</p>
+        </div>
+        <form id="tr-city-form" class="tr-city-form" role="search">
+          <label class="visually-hidden" for="tr-city-in">Search a US city</label>
+          <input id="tr-city-in" type="search" placeholder="Search a US city" autocomplete="off">
+          <button type="submit" class="tr-btn">Go</button>
+        </form>
+      </header>
+      <div class="tr-chips" id="tr-chips" aria-label="Cities"></div>
+      <p class="tr-status" id="tr-status" role="status"></p>
+
+      <div class="tr-layout">
+        <section class="tr-slab tr-map-card" aria-label="Traffic map">
+          <div class="tr-map-wrap">
+            <div id="tr-map" class="tr-map"></div>
+            <button type="button" id="tr-reload" class="tr-btn tr-reload" hidden disabled>Traffic is available in the US only</button>
+            <div class="tr-legend" aria-label="Legend">
+              <span style="--c:#3f9b4f">Free</span><span style="--c:#e2b93b">Moderate</span><span style="--c:#e07a2e">Heavy</span><span style="--c:#a81e24">Severe</span>
+            </div>
+          </div>
+          <!-- Map credits (Leaflet and data sources) sit under the map, not on it -->
+          <div class="map-credits" id="tr-map-credits"></div>
+          <div class="tr-time">
+            <div class="tr-time-row">
+              <button type="button" id="tr-play" class="tr-btn tr-play" aria-label="Play the day">▶</button>
+              <output id="tr-clock" class="tr-clock">5:00 PM</output>
+              <div class="tr-seg" id="tr-day" role="group" aria-label="Day">
+                <button type="button" data-day="weekday" aria-pressed="true">Weekday</button>
+                <button type="button" data-day="weekend" aria-pressed="false">Weekend</button>
+              </div>
+              <button type="button" id="tr-now" class="tr-btn tr-btn-light">Now</button>
+            </div>
+            <label class="visually-hidden" for="tr-hour">Time of day</label>
+            <input type="range" id="tr-hour" class="tr-range" min="0" max="95" step="1" value="68">
+            <div class="tr-chart" id="tr-chart"></div>
+            <p class="tr-peak" id="tr-peak"></p>
+          </div>
+        </section>
+
+        <aside class="tr-side">
+          <section class="tr-slab tr-panel" aria-labelledby="tr-trip-h">
+            <h2 id="tr-trip-h">Trip time</h2>
+            <form id="tr-trip-form" class="tr-trip-form">
+              <label><span>From</span><input id="tr-from" placeholder="e.g. Temple Square" autocomplete="off"></label>
+              <button type="button" id="tr-swap" class="tr-swap" aria-label="Swap from and to">⇅</button>
+              <label><span>To</span><input id="tr-to" placeholder="e.g. Salt Lake City Airport" autocomplete="off"></label>
+              <div class="tr-trip-actions">
+                <button type="submit" class="tr-btn">Estimate trip</button>
+                <button type="button" id="tr-clear" class="tr-btn tr-btn-light">Clear</button>
+              </div>
+            </form>
+            <div id="tr-trip-out" aria-live="polite"></div>
+          </section>
+
+          <section class="tr-slab tr-panel" aria-labelledby="tr-stores-h">
+            <h2 id="tr-stores-h">Best local stores</h2>
+            <p class="tr-where" id="tr-stores-where"></p>
+            <div class="tr-cats" id="tr-cats"></div>
+            <ol class="tr-stores" id="tr-stores-list"></ol>
+            <button type="button" id="tr-stores-here" class="tr-btn tr-btn-light tr-wide">Find stores at the map center</button>
+            <p class="tr-note">Independent stores (not chains) from OpenStreetMap, ranked by how complete their listing is and how close they are.</p>
+          </section>
+        </aside>
+      </div>
+      <section class="tr-slab tr-eats" aria-labelledby="tr-eats-h">
+        <h2 id="tr-eats-h">Famous local restaurants</h2>
+        <p class="tr-where" id="tr-eats-where"></p>
+        <div class="tr-eats-grid" id="tr-eats-grid"></div>
+        <p class="tr-note">Photos from Wikimedia Commons (free to use, credited on each photo). Follow the Yelp link on each place for its photos and reviews there.</p>
+      </section>
+
+      <p class="tr-credit">Traffic colors show <b>typical</b> traffic, estimated from US commute patterns, road type and city size. They are not live traffic. Nationwide highways from Natural Earth · Roads and stores © OpenStreetMap contributors · Routes by OSRM · Places by Photon and Open-Meteo · Map tiles by Esri.</p>
+    </div>
+  </main>
+
   <main id="content-view" hidden>
     <div class="subbar">
       <div class="wrap">
@@ -336,9 +533,14 @@
   <script src="subjects.js"></script>
   <script src="news-sources.js"></script>
   <script src="news.js"></script>
+  <script src="news-games.js"></script>
+  <script src="usnews.js"></script>
   <script src="front.js"></script>
   <script src="weather.js"></script>
   <script src="weather-map.js"></script>
+  <script src="traffic-data.js"></script>
+  <script src="traffic-restaurants.js"></script>
+  <script src="traffic.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

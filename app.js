@@ -7,6 +7,8 @@ const exploreView = document.getElementById("explore-view");
 const subjectView = document.getElementById("subject-view");
 const weatherView = document.getElementById("weather-view");
 const newsView = document.getElementById("news-view");
+const trafficView = document.getElementById("traffic-view");
+const usnewsView = document.getElementById("usnews-view");
 const contentView = document.getElementById("content-view");
 const content = document.getElementById("content");
 const barInput = document.getElementById("bar-input");
@@ -416,12 +418,21 @@ function route() {
   const isWeather = view === "weather";
   const isNews = view === "news";
   const isStacks = view === "stacks";
-  const isFront = !(isContent || isExplore || isSubject || isWeather || isNews || isStacks);
+  const isTraffic = view === "traffic";
+  const isUsNews = view === "usnews";
+  const isFront = !(isContent || isExplore || isSubject || isWeather || isNews || isStacks || isTraffic || isUsNews);
   frontView.hidden = !isFront;
   homeView.hidden = !isStacks;
   newsView.hidden = !isNews;
+  usnewsView.hidden = !isUsNews;
+  // Stop live video when leaving a news tab.
+  if (!isNews) newsLiveStop("news");
+  if (!isUsNews) newsLiveStop("usn");
+  if (!isNews && !isUsNews) document.body.classList.remove("news-filters-open");
   weatherView.hidden = !isWeather;
   if (!isWeather) stopWxFx(); // pause the weather animation off-page
+  trafficView.hidden = !isTraffic;
+  if (!isTraffic) stopTraffic();
   exploreView.hidden = !isExplore;
   subjectView.hidden = !isSubject;
   contentView.hidden = !isContent;
@@ -431,8 +442,12 @@ function route() {
     showExplore();
   } else if (isNews) {
     showNews();
+  } else if (isUsNews) {
+    showUsNews();
   } else if (isWeather) {
     showWeather();
+  } else if (isTraffic) {
+    showTraffic();
   } else if (isSubject) {
     showSubject(view === "history" ? "History" : arg);
   } else if (isFront) {

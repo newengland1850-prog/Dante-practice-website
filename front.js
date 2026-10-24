@@ -26,6 +26,10 @@ const FRONT_TABS = [
     img: `${FRONT_COMMONS}4/4b/Long_Room_Interior%2C_Trinity_College_Dublin%2C_Ireland_-_Diliff.jpg/500px-Long_Room_Interior%2C_Trinity_College_Dublin%2C_Ireland_-_Diliff.jpg` },
   { href: "#/weather", title: "Weather", text: "Forecasts, city photos and a 36-hour weather map.",
     img: `${FRONT_COMMONS}c/c5/Moraine_Lake_17092005.jpg/500px-Moraine_Lake_17092005.jpg` },
+  { href: "#/traffic", title: "Traffic", text: "US traffic through the day, trip times and local stores.",
+    img: `${FRONT_COMMONS}d/dd/80slctraffic.jpg/500px-80slctraffic.jpg` },
+  { href: "#/usnews", title: "US News Bias Check", text: "Major US outlets, left to right, with every story checked for slant.",
+    img: "usnews-logo.svg", logo: true, light: true },
   { href: "#/news", title: "Worldwide National Movement", text: "News from five countries, translated into English, with live stocks.",
     img: "news-logo.svg", logo: true },
 ];
@@ -61,7 +65,7 @@ function frontBuild() {
     `<button type="button" role="tab" aria-label="Picture ${i + 1}: ${escapeHtml(p.caption)}" aria-selected="${i === 0}" data-i="${i}"></button>`).join("");
   document.getElementById("front-tabs").innerHTML = FRONT_TABS.map(t => `
     <a class="front-tab" href="${t.href}">
-      <span class="front-tab-img${t.logo ? " logo" : ""}" style="background-image:url('${t.img}')"></span>
+      <span class="front-tab-img${t.logo ? " logo" : ""}${t.light ? " light" : ""}" style="background-image:url('${t.img}')"></span>
       <span class="front-tab-body">
         <span class="front-tab-title">${escapeHtml(t.title)}</span>
         <span class="front-tab-text">${escapeHtml(t.text)}</span>

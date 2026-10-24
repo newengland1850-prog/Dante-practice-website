@@ -3,10 +3,16 @@
 // It serves the website at http://localhost:8080 and adds a small API the
 // Worldwide National Movement tab needs (browsers can't fetch these sites directly):
 //   GET  /api/health            → { ok: true }
-//   GET  /api/feed?id=<source>  → parsed articles from one source in news-sources.js
+//   GET  /api/feed?id=<source>  → parsed articles from one source in news-sources.js (either news tab)
+//   GET  /api/article?url=<page> → an article's text, from listed sites only, for the US News bias check
+//   GET  /api/access?url=<page>  → whether an article needs a subscription (from the page's paywall markers)
 //   GET  /api/stocks            → prices for the 25 stocks in news-sources.js
+//   GET  /api/history?symbol=&range=1d|5d|1mo → price history for one of those stocks
+//   GET  /api/live?list=us|world → which of a news tab's YouTube channels are live now
 //   POST /api/translate         → { texts: [...], from: "fr" | "auto" } → { translations: [...] }
 //   GET  /api/image?url=<page>  → the article's preview picture (og:image), for listed sites only
+//   GET  /api/roads?lat=&lon=   → main roads around a US city, for the Traffic tab
+//   GET  /api/shops?lat=&lon=   → local (non-chain) stores near a US spot, for the Traffic tab
 //
 // Settings (environment variables): PORT (default 8080), HOST (default 127.0.0.1;
 // use 0.0.0.0 to open the site from a phone on the same Wi-Fi).
@@ -14,7 +20,10 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { NEWS_SOURCES, NEWS_STOCKS } = require("./news-sources.js");
+const os = require("os");
+const { NEWS_SOURCES, NEWS_STOCKS, US_NEWS_SOURCES, NEWS_LIVE, US_NEWS_LIVE } = require("./news-sources.js");
+const ALL_SOURCES = [...NEWS_SOURCES, ...US_NEWS_SOURCES];
+const { TR_CITIES, trInUS, trRoadsQuery, trCompactRoads, trShopsQuery, trCompactShops } = require("./traffic-data.js");
 
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -54,7 +63,12 @@ async function fetchText(url, maxBytes = 3_000_000, userAgent = UA) {
   try { return new TextDecoder(declared).decode(buf); } catch { return buf.toString("utf8"); }
 }
 
+// Some feeds encode twice ("&amp;quot;"), so decode a second time when entities remain.
 function decodeEntities(s) {
+  const once = decodeEntitiesOnce(s);
+  return /&(?:#\d+|#x[0-9a-f]+|quot|apos|lt|gt|nbsp|amp);/i.test(once) ? decodeEntitiesOnce(once) : once;
+}
+function decodeEntitiesOnce(s) {
   return s
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
@@ -134,12 +148,44 @@ async function pool(items, n, fn) {
   return out;
 }
 
+// Google News sitemaps (<url> with <news:title>): link, title, date, picture and keywords.
+function parseSitemap(xml, source) {
+  const items = [];
+  for (const m of xml.matchAll(/<url>[\s\S]*?<\/url>/gi)) {
+    const u = m[0];
+    const title = stripTags(decodeEntities(tag(u, "news:title")));
+    const link = decodeEntities(tag(u, "loc").trim());
+    if (!title || !/^https?:\/\//.test(link) || /\/(video|videos|watch|live-news)\//.test(link)) continue;
+    items.push({
+      source: source.id,
+      title,
+      link,
+      summary: "",
+      image: decodeEntities(tag(u, "image:loc").trim()),
+      categories: stripTags(decodeEntities(tag(u, "news:keywords"))).split(/\s*,\s*/).filter(Boolean).slice(0, 6),
+      date: isoDate(tag(u, "news:publication_date")),
+    });
+  }
+  return items.sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 50);
+}
+
+// Google News search results: drop the " - Outlet" ending and the summary (it only repeats the link).
+function parseGoogleNews(xml, source) {
+  return parseRss(xml, source).map(it => ({ ...it, title: it.title.replace(/\s+-\s+[^-]+$/, ""), summary: "" })).slice(0, 40);
+}
+
+function parseFeed(xml, source) {
+  if (source.format === "sitemap") return parseSitemap(xml, source);
+  if (source.format === "google") return parseGoogleNews(xml, source);
+  return parseRss(xml, source).slice(0, 60);
+}
+
 // ---- API ----
 
 async function apiFeed(id) {
-  const source = NEWS_SOURCES.find(s => s.id === id);
+  const source = ALL_SOURCES.find(s => s.id === id);
   if (!source) return [404, { error: "unknown source" }];
-  const items = await cached(`feed:${id}`, 5 * 60_000, async () => parseRss(await fetchText(source.feed, 3_000_000, FEED_UA), source));
+  const items = await cached(`feed:${id}`, 5 * 60_000, async () => parseFeed(await fetchText(source.feed, 6_000_000, FEED_UA), source));
   return [200, { source: id, items }];
 }
 
@@ -163,6 +209,67 @@ async function apiStocks() {
     }
   }));
   return [200, { quotes }];
+}
+
+// Price history for one of the ticker's stocks: the last trading day (every 5 minutes),
+// the past week (every 30 minutes) or the past month (daily closes).
+const HISTORY_RANGES = { "1d": { interval: "5m", ttl: 2 * 60_000 }, "5d": { interval: "30m", ttl: 5 * 60_000 }, "1mo": { interval: "1d", ttl: 15 * 60_000 } };
+async function apiHistory(symbol, range = "1mo") {
+  const yahoo = String(symbol || "").replace(".", "-");
+  if (!NEWS_STOCKS.includes(yahoo)) return [404, { error: "not one of the listed stocks" }];
+  const r0 = HISTORY_RANGES[range];
+  if (!r0) return [400, { error: "range must be 1d, 5d or 1mo" }];
+  const history = await cached(`hist:${yahoo}:${range}`, r0.ttl, async () => {
+    const data = JSON.parse(await fetchText(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?range=${range}&interval=${r0.interval}`));
+    const r = data.chart.result[0];
+    const closes = r.indicators.quote[0].close;
+    return {
+      symbol: yahoo.replace("-", "."),
+      name: r.meta.longName || r.meta.shortName || yahoo,
+      currency: r.meta.currency,
+      range,
+      previousClose: r.meta.chartPreviousClose ?? r.meta.previousClose ?? null,
+      // Regular trading hours of each day shown (open and close), for the day and week charts.
+      sessions: Array.isArray(r.meta.tradingPeriods)
+        ? r.meta.tradingPeriods.flat().map(p => ({ open: new Date(p.start * 1000).toISOString(), close: new Date(p.end * 1000).toISOString() }))
+        : [],
+      points: r.timestamp
+        .map((t, i) => ({ date: new Date(t * 1000).toISOString(), close: closes[i] }))
+        .filter(p => p.close != null),
+    };
+  });
+  return [200, history];
+}
+
+// Which of a news tab's YouTube channels are live right now, and the video to embed.
+// YouTube's /@channel/live page points at the channel's current live stream.
+async function liveVideo(handle) {
+  return cached(`live:${handle}`, 5 * 60_000, async () => {
+    try {
+      const res = await fetch(`https://www.youtube.com/@${encodeURIComponent(handle)}/live`, {
+        headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9", Cookie: "CONSENT=YES+1; SOCS=CAI" },
+        signal: AbortSignal.timeout(12000),
+      });
+      const html = await res.text();
+      const id = (html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/) || [])[1];
+      const live = /"isLiveNow":true/.test(html);
+      const embeddable = !/"playableInEmbed":false/.test(html);
+      const title = decodeEntities((html.match(/<meta name="title" content="([^"]*)"/) || [])[1] || "");
+      return id && live && embeddable ? { videoId: id, title } : null;
+    } catch {
+      return null;
+    }
+  });
+}
+
+async function apiLive(list) {
+  const channels = list === "us" ? US_NEWS_LIVE : list === "world" ? NEWS_LIVE : null;
+  if (!channels) return [400, { error: "list must be us or world" }];
+  const found = await pool(channels, 4, async c => {
+    const v = await liveVideo(c.handle);
+    return v && { ...c, ...v };
+  });
+  return [200, { live: found.filter(Boolean) }];
 }
 
 // Translation to English through Google Translate's public web endpoint (the one its
@@ -191,13 +298,19 @@ async function apiTranslate(body) {
 }
 
 // Some feeds don't include a picture; fetch the article page and read its preview image.
-const allowedHosts = new Set(NEWS_SOURCES.map(s => new URL(s.feed).hostname.replace(/^www\.|^feeds\.|^moxie\./, "")));
+const allowedHosts = new Set([
+  ...NEWS_SOURCES.map(s => s.site || new URL(s.feed).hostname.replace(/^www\.|^feeds\.|^moxie\./, "")),
+  ...US_NEWS_SOURCES.map(s => s.site),
+]);
+function isListedSite(u) {
+  const host = u.hostname.replace(/^www\./, "");
+  const allowed = [...allowedHosts].some(h => host === h || host.endsWith("." + h)) || /breitbart\.com$|foxnews\.com$/.test(host);
+  return allowed && /^https?:$/.test(u.protocol);
+}
 async function apiImage(pageUrl) {
   let u;
   try { u = new URL(pageUrl); } catch { return [400, { error: "bad url" }]; }
-  const host = u.hostname.replace(/^www\./, "");
-  const allowed = [...allowedHosts].some(h => host === h || host.endsWith("." + h)) || /breitbart\.com$|foxnews\.com$/.test(host);
-  if (!allowed || !/^https?:$/.test(u.protocol)) return [403, { error: "not a listed news site" }];
+  if (!isListedSite(u)) return [403, { error: "not a listed news site" }];
   const image = await cached(`img:${pageUrl}`, 6 * 3600_000, async () => {
     try {
       const html = await fetchText(pageUrl, 400_000);
@@ -208,6 +321,108 @@ async function apiImage(pageUrl) {
     } catch { return ""; }
   });
   return [200, { image }];
+}
+
+// The readable text of an article (its paragraphs), for the US News bias check.
+async function apiArticle(pageUrl) {
+  let u;
+  try { u = new URL(pageUrl); } catch { return [400, { error: "bad url" }]; }
+  if (!isListedSite(u)) return [403, { error: "not a listed news site" }];
+  const text = await cached(`art:${pageUrl}`, 6 * 3600_000, async () => {
+    const html = await fetchText(pageUrl, 3_000_000);
+    const body = (html.match(/<article[\s\S]*<\/article>/i) || [html])[0]
+      .replace(/<(script|style|noscript|figure|figcaption|aside|nav|footer|form)[\s\S]*?<\/\1>/gi, " ");
+    return [...body.matchAll(/<p[\s>][\s\S]*?<\/p>/gi)]
+      .map(p => stripTags(decodeEntities(p[0])))
+      .filter(p => p.length > 60 && !/^(advertisement|sign up|subscribe|copyright|©)/i.test(p))
+      .join("\n")
+      .slice(0, 40000);
+  });
+  return [200, { text, words: text ? text.split(/\s+/).length : 0 }];
+}
+
+// Whether an article needs a subscription, from the markers publishers add for search
+// engines: "isAccessibleForFree" (schema.org) and the "article:content_tier" meta tag.
+// free: true / false, or null when the page has no marker or can't be read.
+async function apiAccess(pageUrl) {
+  let u;
+  try { u = new URL(pageUrl); } catch { return [400, { error: "bad url" }]; }
+  if (!isListedSite(u)) return [403, { error: "not a listed news site" }];
+  const access = await cached(`access:${pageUrl}`, 6 * 3600_000, async () => {
+    try {
+      const html = await fetchText(pageUrl, 1_500_000);
+      const flag = (html.match(/"isAccessibleForFree"\s*:\s*"?(true|false)"?/i) || [])[1];
+      const tier = (html.match(/(?:name|property)=["']article:content_tier["'][^>]*content=["']([^"']+)/i)
+        || html.match(/content=["']([^"']+)["'][^>]*(?:name|property)=["']article:content_tier["']/i) || [])[1];
+      const free = tier === "locked" ? false : flag ? flag.toLowerCase() === "true" : tier === "free" ? true : null;
+      return { free, tier: tier || "" };
+    } catch {
+      return { free: null, tier: "" };
+    }
+  });
+  return [200, access];
+}
+
+// ---- Traffic: OpenStreetMap roads and stores ----
+// Overpass can take half a minute, so answers are also kept on disk between runs.
+
+const OVERPASS = "https://overpass-api.de/api/interpreter";
+const DISK_CACHE = path.join(os.tmpdir(), "all-points-towards-progress");
+const inflight = new Map();
+
+async function overpass(query) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(OVERPASS, {
+      method: "POST",
+      headers: { "User-Agent": "AllPointsTowardsProgress/1.0 (local practice site)", "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(query),
+      signal: AbortSignal.timeout(150000),
+    });
+    if (res.ok) return res.json();
+    if (attempt >= 2 || ![429, 502, 503, 504].includes(res.status)) throw new Error(`Overpass HTTP ${res.status}`);
+    await new Promise(r => setTimeout(r, 4000 * (attempt + 1)));
+  }
+}
+
+// Memory, then disk, then the network; one request at a time per key.
+function diskCached(key, ttlMs, make) {
+  const file = path.join(DISK_CACHE, key.replace(/[^\w.-]/g, "_") + ".json");
+  return cached(key, ttlMs, () => {
+    if (inflight.has(key)) return inflight.get(key);
+    const job = (async () => {
+      try {
+        const st = fs.statSync(file);
+        if (Date.now() - st.mtimeMs < ttlMs) return JSON.parse(fs.readFileSync(file, "utf8"));
+      } catch {}
+      const value = await make();
+      fs.mkdirSync(DISK_CACHE, { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(value));
+      return value;
+    })().finally(() => inflight.delete(key));
+    inflight.set(key, job);
+    return job;
+  });
+}
+
+function latLon(url) {
+  const lat = Number(url.searchParams.get("lat")), lon = Number(url.searchParams.get("lon"));
+  return Number.isFinite(lat) && Number.isFinite(lon) && trInUS(lat, lon) ? [lat, lon] : null;
+}
+
+async function apiRoads(url) {
+  const p = latLon(url);
+  if (!p) return [400, { error: "traffic is available for US places only" }];
+  const [lat, lon] = p.map(v => Math.round(v * 50) / 50); // snap to ~2 km so nearby requests share
+  const roads = await diskCached(`roads-${lat}_${lon}`, 30 * 86400_000, async () => trCompactRoads(await overpass(trRoadsQuery(lat, lon))));
+  return [200, { lat, lon, roads }];
+}
+
+async function apiShops(url) {
+  const p = latLon(url);
+  if (!p) return [400, { error: "stores are available for US places only" }];
+  const [lat, lon] = p.map(v => Math.round(v * 500) / 500); // ~200 m
+  const shops = await diskCached(`shops-${lat}_${lon}`, 3 * 86400_000, async () => trCompactShops(await overpass(trShopsQuery(lat, lon))));
+  return [200, { lat, lon, shops }];
 }
 
 // ---- Static files ----
@@ -234,8 +449,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/health") result = [200, { ok: true }];
     else if (url.pathname === "/api/feed") result = await apiFeed(url.searchParams.get("id"));
     else if (url.pathname === "/api/stocks") result = await apiStocks();
+    else if (url.pathname === "/api/live") result = await apiLive(url.searchParams.get("list"));
+    else if (url.pathname === "/api/history") result = await apiHistory(url.searchParams.get("symbol"), url.searchParams.get("range") || "1mo");
     else if (url.pathname === "/api/translate" && req.method === "POST") result = await apiTranslate(await readJson(req));
     else if (url.pathname === "/api/image") result = await apiImage(url.searchParams.get("url") || "");
+    else if (url.pathname === "/api/article") result = await apiArticle(url.searchParams.get("url") || "");
+    else if (url.pathname === "/api/access") result = await apiAccess(url.searchParams.get("url") || "");
+    else if (url.pathname === "/api/roads") result = await apiRoads(url);
+    else if (url.pathname === "/api/shops") result = await apiShops(url);
     else result = [404, { error: "not found" }];
     send(res, result[0], result[1], undefined, cors);
   } catch (err) {
@@ -247,4 +468,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Stacks is running at http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}/`);
   console.log("Worldwide National Movement: " + `http://localhost:${PORT}/#/news`);
   console.log("Press Ctrl+C to stop.");
+  // Fetch the first Traffic city ahead of time (only once; it is then kept on disk).
+  const first = TR_CITIES[0];
+  apiRoads(new URL(`http://x/?lat=${first.lat}&lon=${first.lon}`)).catch(() => {});
 });

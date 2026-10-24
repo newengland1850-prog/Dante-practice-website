@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="US News Bias Check">
+  <defs>
+    <path id="star" d="M0,-7 L2.06,-2.83 6.66,-2.16 3.33,1.08 4.11,5.66 0,3.5 -4.11,5.66 -3.33,1.08 -6.66,-2.16 -2.06,-2.83Z"/>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="#f7f4ee" stroke="#1d2b4f" stroke-width="6"/>
+  <!-- Stars across the top -->
+  <g fill="#c9a23a">
+    <use href="#star" x="64" y="40"/><use href="#star" x="82" y="32"/><use href="#star" x="100" y="29"/>
+    <use href="#star" x="118" y="32"/><use href="#star" x="136" y="40"/>
+  </g>
+  <!-- Balance scale -->
+  <g stroke="#1d2b4f" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M100 54 V150"/>
+    <path d="M52 70 H148"/>
+    <path d="M52 70 L34 112 M52 70 L70 112"/>
+    <path d="M148 70 L130 112 M148 70 L166 112"/>
+    <path d="M74 156 H126"/>
+  </g>
+  <circle cx="100" cy="58" r="7" fill="#1d2b4f"/>
+  <path d="M28 112 H76 A24 18 0 0 1 28 112 Z" fill="#2f6fd0" stroke="#1d2b4f" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M124 112 H172 A24 18 0 0 1 124 112 Z" fill="#d23a3a" stroke="#1d2b4f" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M88 150 H112 L118 156 H82 Z" fill="#1d2b4f"/>
+</svg>

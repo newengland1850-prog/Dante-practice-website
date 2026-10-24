@@ -484,6 +484,12 @@ a { color: var(--link); }
 .article-body .mw-empty-elt,
 .article-body .ambox { display: none; }
 
+/* Map credits under a map (Leaflet's attribution box, moved out of the map corner) */
+.map-credits { margin-top: 6px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.map-credits .leaflet-control-attribution { float: none; margin: 0; padding: 0; background: none; box-shadow: none; font-size: 11px; color: inherit; }
+.map-credits .leaflet-control-attribution a { color: inherit; text-decoration: underline; }
+.map-credits .leaflet-attribution-flag { vertical-align: -1px; }
+
 /* Footer */
 .footer {
   background: var(--ink);
